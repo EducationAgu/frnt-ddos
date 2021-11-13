@@ -37,14 +37,14 @@ namespace WebApi.Services
 
         public AuthenticateResponse Authenticate(AuthenticateRequest model, string ipAddress)
         {
-            var user =  _context.Users.SingleOrDefault(x => x.Username == model.Username && x.Password == model.Password);
-
-            // return null if user not found
-            if (user == null) return null;
+            var user =  _context.Users.SingleOrDefault(x => x.Username == model.Username);
+            // если нет пользователя с таким именем/ не совпал хеш пароля, возвращаем null
+            if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.Password))
+                return null;
 
             // authentication successful so generate jwt and refresh tokens
             var jwtToken = generateJwtToken(user);
-            var refreshToken = generateRefreshToken(ipAddress);
+            var refreshToken = generateRefreshToken();
 
             // save refresh token
             user.RefreshTokens.Add(refreshToken);
@@ -67,7 +67,7 @@ namespace WebApi.Services
             if (!refreshToken.IsActive) return null;
 
             // replace old refresh token with a new one and save
-            var newRefreshToken = generateRefreshToken(ipAddress);
+            var newRefreshToken = generateRefreshToken();
             refreshToken.Revoked = DateTime.UtcNow;
             refreshToken.RevokedByIp = ipAddress;
             refreshToken.ReplacedByToken = newRefreshToken.Token;
@@ -95,7 +95,6 @@ namespace WebApi.Services
 
             // revoke token and save
             refreshToken.Revoked = DateTime.UtcNow;
-            refreshToken.RevokedByIp = ipAddress;
             _context.Update(user);
             _context.SaveChanges();
 
@@ -122,16 +121,17 @@ namespace WebApi.Services
             {
                 Subject = new ClaimsIdentity(new Claim[] 
                 {
-                    new Claim(ClaimTypes.Name, user.Id.ToString())
+                    new Claim("UserId", user.Id.ToString()),
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(15),
+                Expires = DateTime.UtcNow.AddMinutes(1),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
+            
             return tokenHandler.WriteToken(token);
         }
 
-        private RefreshToken generateRefreshToken(string ipAddress)
+        private RefreshToken generateRefreshToken()
         {
             using(var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
@@ -140,9 +140,7 @@ namespace WebApi.Services
                 return new RefreshToken
                 {
                     Token = Convert.ToBase64String(randomBytes),
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Created = DateTime.UtcNow,
-                    CreatedByIp = ipAddress
+                    Expires = DateTime.UtcNow.AddMinutes(5),
                 };
             }
         }

@@ -4,6 +4,9 @@ using WebApi.Services;
 using WebApi.Models;
 using Microsoft.AspNetCore.Http;
 using System;
+using System.Security.Cryptography;
+using System.Text;
+using System.Collections.Generic;
 
 namespace WebApi.Controllers
 {
@@ -13,6 +16,7 @@ namespace WebApi.Controllers
     public class UsersController : ControllerBase
     {
         private IUserService _userService;
+        Dictionary<string, string> saltToHost = new Dictionary<string, string>();
 
         public UsersController(IUserService userService)
         {
@@ -38,6 +42,7 @@ namespace WebApi.Controllers
         public IActionResult RefreshToken()
         {
             var refreshToken = Request.Cookies["refreshToken"];
+
             var response = _userService.RefreshToken(refreshToken, ipAddress());
 
             if (response == null)

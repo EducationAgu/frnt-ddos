@@ -25,8 +25,11 @@ namespace WebApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            // in memory database used for simplicity, change to a real db for production applications
-            services.AddDbContext<DataContext>(x => x.UseInMemoryDatabase("TestDb"));
+            // docker run -d --name olya -e POSTGRES_PASSWORD=postgres -e  POSTGRES_USER=postgres -e POSTGRES_DB=jwt --restart always -p "1212:5432" postgres
+            services.AddDbContext<DataContext>(options =>
+            {
+                options.UseNpgsql("Username=postgres; Database=jwt; Password=postgres; Host=localhost; Port=1212");
+            });
 
             services.AddCors();
             services.AddControllers().AddJsonOptions(x => x.JsonSerializerOptions.IgnoreNullValues = true);
@@ -59,7 +62,9 @@ namespace WebApi
             });
 
             // configure DI for application services
-            services.AddScoped<IUserService, UserService>();
+            services.AddTransient<IUserService, UserService>();
+
+            services.AddScoped<IDocumentService, DocumentService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -67,9 +72,16 @@ namespace WebApi
         {
             // add hardcoded test user to db on startup
             // plain text password is used for simplicity, hashed passwords should be used in production applications
-            context.Users.Add(new User { FirstName = "Test", LastName = "User", Username = "test", Password = "test" });
-            context.SaveChanges();
+            /*  context.Users.Add(new User { Id = 1, FirstName = "User", LastName = "1", Username = "username_1", Password = BCrypt.Net.BCrypt.HashPassword("test")});
+              context.Users.Add(new User { Id = 2, FirstName = "UseR", LastName = "2", Username = "username_2", Password = BCrypt.Net.BCrypt.HashPassword("test2")}); 
 
+              context.Documents.Add(new Document() { Id = 1, Name = "name 1", Data = "data for document 1", UserId = 1});
+              context.Documents.Add(new Document() { Id = 2, Name = "name 2", Data = "data for document 2", UserId = 1 });
+              context.Documents.Add(new Document() { Id = 3, Name = "name 3", Data = "data for document 3", UserId = 1 });
+              context.Documents.Add(new Document() { Id = 4, Name = "name 4", Data = "data for document 4", UserId = 2 });
+
+              context.SaveChanges();
+            */
             app.UseRouting();
 
             // global cors policy
