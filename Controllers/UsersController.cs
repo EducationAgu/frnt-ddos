@@ -16,17 +16,20 @@ namespace WebApi.Controllers
     public class UsersController : ControllerBase
     {
         private IUserService _userService;
-        Dictionary<string, string> saltToHost = new Dictionary<string, string>();
+        private RSAdecoder decoder;
+
 
         public UsersController(IUserService userService)
         {
             _userService = userService;
+            decoder = new RSAdecoder();
         }
 
         [AllowAnonymous]
         [HttpPost("authenticate")]
         public IActionResult Authenticate([FromBody] AuthenticateRequest model)
         {
+            model.Password = decoder.Decrypt(model.Password);
             var response = _userService.Authenticate(model, ipAddress());
 
             if (response == null)
