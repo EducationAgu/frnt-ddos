@@ -28,7 +28,7 @@ namespace WebApi
             // docker run -d --name olya -e POSTGRES_PASSWORD=postgres -e  POSTGRES_USER=postgres -e POSTGRES_DB=jwt --restart always -p "1212:5432" postgres
             services.AddDbContext<DataContext>(options =>
             {
-                options.UseNpgsql("Username=postgres; Database=jwt; Password=postgres; Host=localhost; Port=1212");
+                options.UseNpgsql("Username=postgres; Database=jwt; Password=111111; Host=localhost; Port=5432");
             });
 
             services.AddCors();
